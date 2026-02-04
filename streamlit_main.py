@@ -83,7 +83,33 @@ if st.session_state.mining:
             hashes_per_second = nonce / elapsed_total if elapsed_total > 0 else 0
             
             # B. Update UI Metrics
-            metric_hash_count.metric("Total
+            metric_hash_count.metric("Total Hashes", f"{nonce:,}")
+            metric_speed.metric("Hash Rate", f"{hashes_per_second:.0f} H/s")
+            metric_time.metric("Alive Time", f"{elapsed_total:.1f}s")
+            
+            # C. Create a Log Message
+            log_msg = f"[{datetime.datetime.now().strftime('%H:%M:%S')}] ALIVE | Time: {elapsed_total:.1f}s | Hashes: {nonce}"
+            
+            # D. Print to Real Terminal (Force Flush)
+            print(log_msg, flush=True)
+            
+            # E. Update On-Screen Terminal (Keep last 10 lines only)
+            st.session_state.logs.append(log_msg)
+            if len(st.session_state.logs) > 10:
+                st.session_state.logs.pop(0)
+            
+            log_terminal.code("\n".join(st.session_state.logs), language="text")
+            
+            # F. Reset update timer
+            last_update_time = current_time
+            
+            # G. Yield control slightly so the "Stop" button can be registered
+            time.sleep(0.01)
+
+else:
+    st.info("Mining is currently stopped. Press 'Start' in the sidebar.")
+    if st.session_state.logs:
+        log_terminal.code("\n".join(st.session_state.logs), language="text")
 
 # import streamlit as st
 # import hashlib

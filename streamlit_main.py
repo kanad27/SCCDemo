@@ -4,78 +4,165 @@ import time
 import datetime
 import sys
 
-# Set page configuration
-st.set_page_config(page_title="Mining Detection Demo", page_icon="⏱️")
+# Page Config
+st.set_page_config(page_title="Mining Log Demo", page_icon="⚙️")
 
-st.title("⏱️ Mining Survival Timer")
-st.markdown("""
-    **Experiment:** This app runs a CPU-intensive loop and logs the duration to the console.
-    
-    Check the **'Manage App' -> 'Logs'** tab in your Streamlit dashboard to see exactly when the process stops.
-""")
+st.title("⚙️ Visible Mining Simulator")
+st.write("This version forces logs to flush immediately and updates the UI in real-time.")
 
-# Sidebar controls
-difficulty = st.sidebar.slider("Difficulty (Zeros)", 1, 5, 2)
-st.sidebar.warning("This will eventually crash the container.")
-
-# State management
-if 'mining' not in st.session_state:
+# --- SIDEBAR ---
+st.sidebar.header("Controls")
+difficulty = st.sidebar.slider("Difficulty", 1, 5, 2)
+# We use a session state variable to control the loop
+if "mining" not in st.session_state:
     st.session_state.mining = False
-if 'hashes' not in st.session_state:
-    st.session_state.hashes = 0
-if 'start_time' not in st.session_state:
-    st.session_state.start_time = None
+if "logs" not in st.session_state:
+    st.session_state.logs = []
 
-def mine(difficulty_zeros):
-    prefix_str = '0' * difficulty_zeros
+def start_mining():
+    st.session_state.mining = True
+
+def stop_mining():
+    st.session_state.mining = False
+
+col1, col2 = st.sidebar.columns(2)
+col1.button("🟢 Start", on_click=start_mining)
+col2.button("🔴 Stop", on_click=stop_mining)
+
+# --- MAIN UI LAYOUT ---
+# We create empty placeholders that we can update dynamically from the loop
+metrics_container = st.container()
+with metrics_container:
+    m1, m2, m3 = st.columns(3)
+    metric_hash_count = m1.empty()
+    metric_speed = m2.empty()
+    metric_time = m3.empty()
+
+st.divider()
+st.subheader("Terminal Output Mirror")
+# A placeholder for the on-screen log window
+log_terminal = st.empty()
+
+
+# --- MINING LOGIC ---
+if st.session_state.mining:
+    
+    # Initialize variables
     nonce = 0
-    
-    # Record start time
     start_time = time.time()
-    st.session_state.start_time = start_time
+    last_update_time = start_time
     
-    print(f"--- STARTING MINING SIMULATION AT {datetime.datetime.now()} ---")
+    # Initial Log
+    start_msg = f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Process Started..."
+    print(start_msg, flush=True) # flush=True forces the log to appear instantly
+    st.session_state.logs.append(start_msg)
     
+    # ---------------------------------------------------------
+    # THE LOOP
+    # ---------------------------------------------------------
     while st.session_state.mining:
-        # 1. CPU Intensive Work
-        input_data = f"block_{nonce}".encode()
-        hash_result = hashlib.sha256(input_data).hexdigest()
         
-        nonce += 1
-        st.session_state.hashes = nonce
+        # 1. THE HEAVY LIFTING (CPU Stress)
+        # We do a batch of hashes at once to maximize CPU usage
+        # instead of updating UI every single hash (which is slow)
+        batch_size = 5000 
+        for _ in range(batch_size):
+            input_data = f"block_{nonce}".encode()
+            hashlib.sha256(input_data).hexdigest()
+            nonce += 1
         
-        # 2. Logging & Reporting (Every 5000 iterations to avoid log spamming)
-        if nonce % 50000 == 0:
-            elapsed = time.time() - start_time
-            # This print statement goes to the Streamlit Cloud Logs
-            print(f"ALIVE: {elapsed:.2f}s elapsed | {nonce} hashes calculated")
+        # 2. CALCULATE STATS
+        current_time = time.time()
+        elapsed_total = current_time - start_time
+        time_since_last_update = current_time - last_update_time
+        
+        # 3. UPDATE SCREEN & LOGS (Only every 0.5 seconds to prevent UI freeze)
+        if time_since_last_update > 0.5:
             
-            # Update UI (Optional: Yielding slightly lets the UI update)
-            time.sleep(0.001) 
+            # A. Calculate Hashrate
+            hashes_per_second = nonce / elapsed_total if elapsed_total > 0 else 0
             
-            # Simple check to stop the UI from freezing entirely
-            if not st.session_state.mining:
-                break
+            # B. Update UI Metrics
+            metric_hash_count.metric("Total
 
-    end_time = time.time()
-    print(f"--- STOPPED USER REQUEST AT {datetime.datetime.now()} ---")
-    print(f"Total Duration: {end_time - start_time:.2f} seconds")
+# import streamlit as st
+# import hashlib
+# import time
+# import datetime
+# import sys
 
-# UI Controls
-col1, col2 = st.columns(2)
+# # Set page configuration
+# st.set_page_config(page_title="Mining Detection Demo", page_icon="⏱️")
 
-with col1:
-    if st.button("🔴 Start Stress Test"):
-        st.session_state.mining = True
-        mine(difficulty)
+# st.title("⏱️ Mining Survival Timer")
+# st.markdown("""
+#     **Experiment:** This app runs a CPU-intensive loop and logs the duration to the console.
+    
+#     Check the **'Manage App' -> 'Logs'** tab in your Streamlit dashboard to see exactly when the process stops.
+# """)
 
-with col2:
-    if st.button("🛑 Stop"):
-        st.session_state.mining = False
-        st.rerun()
+# # Sidebar controls
+# difficulty = st.sidebar.slider("Difficulty (Zeros)", 1, 5, 2)
+# st.sidebar.warning("This will eventually crash the container.")
 
-# Display Live Metrics
-if st.session_state.mining and st.session_state.start_time:
-    current_duration = time.time() - st.session_state.start_time
-    st.metric(label="Survival Time", value=f"{current_duration:.2f} s")
-    st.metric(label="Hashes Computed", value=st.session_state.hashes)
+# # State management
+# if 'mining' not in st.session_state:
+#     st.session_state.mining = False
+# if 'hashes' not in st.session_state:
+#     st.session_state.hashes = 0
+# if 'start_time' not in st.session_state:
+#     st.session_state.start_time = None
+
+# def mine(difficulty_zeros):
+#     prefix_str = '0' * difficulty_zeros
+#     nonce = 0
+    
+#     # Record start time
+#     start_time = time.time()
+#     st.session_state.start_time = start_time
+    
+#     print(f"--- STARTING MINING SIMULATION AT {datetime.datetime.now()} ---")
+    
+#     while st.session_state.mining:
+#         # 1. CPU Intensive Work
+#         input_data = f"block_{nonce}".encode()
+#         hash_result = hashlib.sha256(input_data).hexdigest()
+        
+#         nonce += 1
+#         st.session_state.hashes = nonce
+        
+#         # 2. Logging & Reporting (Every 5000 iterations to avoid log spamming)
+#         if nonce % 50000 == 0:
+#             elapsed = time.time() - start_time
+#             # This print statement goes to the Streamlit Cloud Logs
+#             print(f"ALIVE: {elapsed:.2f}s elapsed | {nonce} hashes calculated")
+            
+#             # Update UI (Optional: Yielding slightly lets the UI update)
+#             time.sleep(0.001) 
+            
+#             # Simple check to stop the UI from freezing entirely
+#             if not st.session_state.mining:
+#                 break
+
+#     end_time = time.time()
+#     print(f"--- STOPPED USER REQUEST AT {datetime.datetime.now()} ---")
+#     print(f"Total Duration: {end_time - start_time:.2f} seconds")
+
+# # UI Controls
+# col1, col2 = st.columns(2)
+
+# with col1:
+#     if st.button("🔴 Start Stress Test"):
+#         st.session_state.mining = True
+#         mine(difficulty)
+
+# with col2:
+#     if st.button("🛑 Stop"):
+#         st.session_state.mining = False
+#         st.rerun()
+
+# # Display Live Metrics
+# if st.session_state.mining and st.session_state.start_time:
+#     current_duration = time.time() - st.session_state.start_time
+#     st.metric(label="Survival Time", value=f"{current_duration:.2f} s")
+#     st.metric(label="Hashes Computed", value=st.session_state.hashes)

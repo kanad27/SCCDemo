@@ -111,12 +111,12 @@ else:
     if st.session_state.logs:
         log_terminal.code("\n".join(st.session_state.logs), language="text")
 
-if st.user.is_logged_in:
-    user_info = st.user.to_dict()
-    # e.g. from Google:
-    canonical_id = user_info["sub"]      # stable unique user id
-    email = user_info["email"]           # user email if you need it
-    st.write(f"Hello, user {canonical_id}")
+# if st.user.is_logged_in:
+#     user_info = st.user.to_dict()
+#     # e.g. from Google:
+#     canonical_id = user_info["sub"]      # stable unique user id
+#     email = user_info["email"]           # user email if you need it
+#     st.write(f"Hello, user {canonical_id}")
 # import streamlit as st
 # import hashlib
 # import time
